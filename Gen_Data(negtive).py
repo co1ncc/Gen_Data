@@ -1,7 +1,7 @@
 import os
 import json
 from openai import OpenAI
-from Prompt import Doctor_prompt, Patient_prompt, Tongjing
+from Prompt_Neg import Doctor_prompt, Patient_prompt, Tongjing
 import re
 
 
@@ -11,7 +11,7 @@ client = OpenAI(
     base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
 )
 MODEL = "qwen3-235b-a22b-thinking-2507"
-OUTPUT_JSONL = "Dataset/Dialogue_Dataset.jsonl"
+OUTPUT_JSONL = "Dataset/Neg_Dataset/Dialogue_Dataset.jsonl"
 
 
 # ====== 写入一行JSON ======
@@ -21,7 +21,7 @@ def append_jsonl(record: dict, path: str = OUTPUT_JSONL):
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
 
-# 构建某个证型的对话场景
+# 构建某个证型的对话场景，负样本情况，如何建立
 def build_syndrome_background(syndrome_name: str) -> str:
     return (
         f"【场景约束】本条样本的目标证型：『{syndrome_name}』。\n"
@@ -47,7 +47,6 @@ def gen_dialogue(role: str, history: list[str], judge: bool = False, target_synd
     else:
         # 首轮在对话顶部加入“目标证型”场景约束
         if target_syndrome:
-            # target_syndrome_prompt = build_syndrome_background(target_syndrome
             target_syndrome_prompt = "（尚无对话）"
             dialogue_text = target_syndrome_prompt + "\n"
         else:
@@ -67,12 +66,6 @@ def gen_dialogue(role: str, history: list[str], judge: bool = False, target_synd
      2) 依据：仅使用对话中已出现且来自【知识库.Tongjing】的症状词，说明为何不满足任何痛经证型的关键要点（例如：经期不加重、经量/经色/经质正常、疼痛轻微短暂可自缓、缺乏腰骶酸痛/面色晦暗/失眠健忘等聚合要点）。
      3) 建议：给出生活方式与必要他科评估建议（如规律作息、拉伸与减少久坐、饮食少寒凉、考虑运动医学/消化科评估等）。
      禁止：不得选择或输出任何“证型”，不得引用或转述【知识库.Tongjing】中的治疗方案；禁止继续提问；禁止加入任何角色前缀；只输出内容本身。"""
-        # 肯定
-#         speaker_prompt = speaker_prompt + """
-# 【这是最后一次医生发言】请仅进行证型预测与方案给出：
-# 1) 从 Tongjing 的证型集合中仅选择1个“可能证型”，并给出辨证要点（仅使用已出现且来自知识库的症状词）。
-# 2) 依据所选证型，给出 Tongjing 中的“治疗方案”（可做简要转述，不得编造）。
-# 禁止继续提问；禁止加入任何角色前缀；只输出内容本身。"""
 
     # 根据对话历史，调用大模型生成回复
     completion = client.chat.completions.create(
@@ -138,11 +131,8 @@ def generate_many(nums: int = 10, rounds: int = 5):
     syndromes = list(Tongjing.keys())
     syndromes_len = len(syndromes)
     for i in range(1, nums + 1):
-        target = syndromes[(i - 1) % syndromes_len]  # 均匀循环
-        # print(f"==================== 生成第 {i}/{nums} 条样本（目标证型：{target}） ===================="
         print(f"==================== 生成第{i}条样本 ====================")
         multi_round_dialogue(i, rounds=rounds)
-        # multi_round_dialogue(i, rounds=rounds, target_syndrome=target)
 
 
 if __name__ == "__main__":
