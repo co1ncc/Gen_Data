@@ -136,4 +136,4 @@ def generate_many(nums: int = 10, rounds: int = 5):
 
 if __name__ == "__main__":
     # 每个证型两条样本
-    generate_many(nums=1, rounds=4)
+    generate_many(nums=80, rounds=4)
